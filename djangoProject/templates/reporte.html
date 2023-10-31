@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte</title>
+</head>
+<body>
+    <h1>{{nombre_reporte }}</h1>
+    <h1>{{ descripcion }}</h1>
+    <h1>{{ repuesta }}</h1>
+    {% if exist %}
+    	 {% for valor in conte  %}
+        <h1>{{ valor }}</h1>
+    {% endfor %}
+    {% else %}
+        <h1>No hay datos</h1>
+    {% endif %}
+
+
+
+</body>
+</html>
