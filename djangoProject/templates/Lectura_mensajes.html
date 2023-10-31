@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cargar Archivo</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            margin: 20px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            background-color: #f7f7f7;
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cargar un Archivo</h1>
+    <label for="file-upload" class="container">
+        <input type="file" id="file-upload" name="archivo" accept=".csv, .txt">
+        <p>Haz clic o arrastra un archivo aquí para cargarlo.</p>
+    </label>
+</body>
+</html>
