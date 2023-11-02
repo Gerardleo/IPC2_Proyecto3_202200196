@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Peticiones</title>
+    <script  src ="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
+
+</head>
+<style>
+    body{
+        background-color: #f5f5f5;
+    }
+    .container{
+        margin-top: 100px;
+    }
+    h1{
+        text-align: center;
+        margin-bottom: 50px;
+    }
+    .btn_opciones{
+        margin-bottom: 20px;
+        height: 100px;
+    }
+    .minimalist-heading {
+        font-family: 'Roboto Slab', serif;
+        color: #333;
+        text-align: center;
+        margin: 20px 0;
+        padding: 10px;
+        border: 1px solid #333;
+        border-radius: 5px;
+        margin-right: 5px;
+        margin-left: 5px;
+    }
+</style>
+<body>
+<div id="alerta" class="alert alert-info" style="display: none;">
+        Respuesta: <span id="respuesta"></span>
+</div>
+<div class="d-grid gap-2 d-md-flex justify-content-md-end">
+  <a href="" class="btn btn-primary me-md-2"  style="margin-top: 5px" >Ayuda</a>
+  <a href="{% url 'index' %}" class="btn btn-primary" style="margin-top: 5px"  >Inicio</a>
+</div>
+
+    <h1 class="minimalist-heading" style="margin-left: 5px; margin-right: 5px" >Peticiones</h1>
+
+<div class="row" style="margin-left: 5px; margin-right: 5px">
+  <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Consultar Menciones</h5>
+        <p class="card-text">En este apartado puede buscar las menciones mediante fechas</p>
+          <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#busquedaMencionesModal">Buscar</a>
+            <button  id="detalles_menciones" onclick="mostrarDetallesMenciones()" class="btn btn-primary" style="display: none">Detalles</button>
+
+          <div style="margin-top: 5px">
+              <button id="generarPDFMenciones" class="btn btn-primary" onclick="generarPDFMenciones()" style="display: none">Generar PDF</button>
+          </div>
+            <div id="detallesMenciones"></div>
+        <!-- Elemento <canvas> para el gráfico -->
+        <canvas id="graficoMenciones"  height="400" style="display: none" ></canvas>
+
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Consultar Hashtags</h5>
+        <p class="card-text">En este apartado puede buscar las menciones mediante fechas </p>
+        <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#busquedaHastghsModal">Buscar</a>
+          <button  id="detalles_hastaghs" onclick="mostrarDetallesHashtags()" class="btn btn-primary" style="display: none">Detalles</button>
+
+          <div style="margin-top: 5px">
+              <button id="generarHastagh" class="btn btn-primary" onclick="generarPDFHashtags()" style="display: none">Generar PDF</button>
+
+          </div>
+          <div id="detallesHashtags"></div>
+
+          <div>
+        <!-- Elemento <canvas> para el gráfico -->
+        <canvas id="graficoHashtags" height="400" style="display: none"></canvas>
+         </div>
+      </div>
+    </div>
+  </div>
+    <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Consultar Sentimientos</h5>
+        <p class="card-text">En este apartado puede buscar los sentimientos mediante fechas</p>
+        <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#busquedaSentimientosModal">Buscar</a>
+          <button  id="detalles_sentimientos" onclick="mostrarDetallesSentimientos()" class="btn btn-primary" style="display: none">Detalles</button>
+
+          <div style="margin-top: 5px">
+              <button id="generarSentimientos" class="btn btn-primary" onclick="generarPDFSentiminetos()" style="display: none">Generar PDF</button>
+
+          </div>
+
+          <div id="detallesSentimientos"></div>
+          <div>
+        <!-- Elemento <canvas> para el gráfico -->
+        <canvas id="graficoSentimientos"  height="400" style="display: none"></canvas>
+         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Modal de Menciones de mensajes -->
+    <div class="modal fade" id="busquedaMencionesModal" tabindex="-1" role="dialog" aria-labelledby="busquedaMencionesModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{% url 'buscarMenciones' %}" method="get" enctype="multipart/form-data"> -->
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="busquedaMencionesModalLabel">Busqueda de menciones</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                     <div class="form-group">
+                        <label for="fecha_inicio">Fecha de Inicio</label>
+                        <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio">
+                    </div>
+                      <div class="form-group">
+                        <label for="fecha_fin">Fecha de Fin</label>
+                        <input type="text" class="form-control" id="fecha_fin" name="fecha_fin">
+                      </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="buscarBoton">Buscar</button>
+                       </div>
+            </form>
+
+
+            </div>
+        </div>
+    </div>
+
+<!-- Modal de Buscar hashtags de mensajes -->
+    <div class="modal fade" id="busquedaHastghsModal" tabindex="-1" role="dialog" aria-labelledby="busquedaHastghsModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{% url 'buscarHastaghs' %}" method="get" enctype="multipart/form-data"> -->
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="busquedaHastghsModalLabel">Busqueda de Hashtags</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                     <div class="form-group">
+                        <label for="fecha_inicio">Fecha de Inicio</label>
+                        <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio">
+                    </div>
+                      <div class="form-group">
+                        <label for="fecha_fin">Fecha de Fin</label>
+                        <input type="text" class="form-control" id="fecha_fin" name="fecha_fin">
+                      </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="buscarBoton">Buscar</button>
+                       </div>
+            </form>
+
+
+            </div>
+        </div>
+    </div>
+
+<!-- Modal de Sentimientos de mensajes -->
+    <div class="modal fade" id="busquedaSentimientosModal" tabindex="-1" role="dialog" aria-labelledby="busquedaSentimientosModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{% url 'buscarSentimientos' %}" method="get" enctype="multipart/form-data"> -->
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="busquedaSentimientosModalLabel">Busqueda de Sentimientos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                     <div class="form-group">
+                        <label for="fecha_inicio">Fecha de Inicio</label>
+                        <input type="text" class="form-control" id="fecha_inicio" name="fecha_inicio">
+                    </div>
+                      <div class="form-group">
+                        <label for="fecha_fin">Fecha de Fin</label>
+                        <input type="text" class="form-control" id="fecha_fin" name="fecha_fin">
+                      </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="buscarBoton">Buscar</button>
+                       </div>
+            </form>
+
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+</body>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+
+<script>
+
+   var clickDetalleSentimientos = false
+   var clickDetalleHastags= false
+   var clickDetalleMenciones = false
+
+   $("#detalles_sentimientos").click(function(){
+        if(clickDetalleSentimientos == false){
+            $("#detallesSentimientos").show();
+            clickDetalleSentimientos = true;
+        }else{
+            $("#detallesSentimientos").hide();
+            clickDetalleSentimientos = false;
+        }
+   })
+
+   $("#detalles_hastaghs").click(function(){
+        if(clickDetalleHastags == false){
+            $("#detallesHashtags").show();
+            clickDetalleHastags = true;
+        }else{
+            $("#detallesHashtags").hide();
+            clickDetalleHastags = false;
+        }
+   });
+
+   $("#detalles_menciones").click(function(){
+        if(clickDetalleMenciones == false){
+            $("#detallesMenciones").show();
+            clickDetalleMenciones = true;
+        }else{
+            $("#detallesMenciones").hide();
+            clickDetalleMenciones = false;
+        }
+   });
+
+ $(document).ready(function() {
+    $('#fecha_inicio, #fecha_fin').datepicker({
+      format: 'dd-mm-yyyy',  // Formato de fecha deseado
+      autoclose: true,       // Cierra automáticamente el Datepicker al seleccionar una fecha
+    });
+  });
+
+
+    var mencionesCanvas = document.getElementById('graficoMenciones').getContext('2d');
+    var data_menciones = {{ data_menciones|safe }};
+
+    if (data_menciones.codigo == 1) {
+        $("#detalles_menciones").show();
+        $("#generarPDFMenciones").show();
+        $("#graficoMenciones").show();
+        var labels = Object.keys(data_menciones.menciones_usuario_totales); // Obtener los nombres de usuario
+        var valores = Object.values(data_menciones.menciones_usuario_totales); // Obtener los valores
+
+        var mencionesChart = new Chart(mencionesCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Número de menciones',
+                    data: valores,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } else {
+        if (data_menciones.codigo == 0) {
+            $("#alerta").show();
+            $("#respuesta").text(data_menciones.mensaje);
+        }
+    }
+    var hashtagsCanvas = document.getElementById('graficoHashtags').getContext('2d');
+    var data_hashtgs = {{ data_hashtags|safe }};
+
+    if (data_hashtgs.codigo == 1) {
+        $("#detalles_hastaghs").show();
+        $("#generarHastagh").show();
+        $("#graficoHashtags").show();
+        var labels = Object.keys(data_hashtgs.hashtags_totales); // Obtener los nombres de usuario
+        var valores = Object.values(data_hashtgs.hashtags_totales); // Obtener los valores
+
+        var hashtagsChart = new Chart(hashtagsCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Número de Hashtags',
+                    data: valores,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } else {
+        if (data_hashtgs.codigo == 0) {
+            $("#alerta").show();
+            $("#respuesta").text(data_hashtgs.mensaje);
+        }
+    }
+
+    var sentimientosCanvas = document.getElementById('graficoSentimientos').getContext('2d');
+    var data_sentimientos = {{ data_sentimientos|safe }};
+
+    if (data_sentimientos.codigo == 1) {
+        $("#graficoSentimientos").show();
+        $("#detalles_sentimientos").show();
+        $("#generarSentimientos").show();
+
+        var labels = Object.keys(data_sentimientos.total_palabras); // Obtener los nombres de usuario
+        var valores = Object.values(data_sentimientos.total_palabras); // Obtener los valores
+
+        var hashtagsChart = new Chart(sentimientosCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Número de Hashtags',
+                    data: valores,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } else {
+        if (data_sentimientos.codigo == 0) {
+            $("#alerta").show();
+            $("#respuesta").text(data_sentimientos.mensaje);
+        }
+    }
+
+
+
+
+// Define una función para generar el PDF
+function generarPDFSentiminetos() {
+
+        const sentimientosCanvas = document.getElementById('graficoSentimientos');
+        const pdfMake = window.pdfMake;
+
+        const data = {{ data_sentimientos|safe }}; // Tus datos de sentimientos
+
+        const documentoPDF = {
+            content: [
+                { text: 'Reporte de Sentimientos', style: 'header' },
+                { text: 'Gráfico de Sentimientos', style: 'subheader' },
+                {
+                    image: sentimientosCanvas.toDataURL(),
+                    width: 500
+                },
+                { text: 'Detalles de Sentimientos', style: 'subheader' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['*', '*', '*', '*', '*', '*'],
+                        body: [
+                            ['Fecha y Hora', 'Negativas', 'Negativas Rechazadas', 'Neutras', 'Positivas', 'Positivas Rechazadas'],
+                            ...Object.keys(data.menciones_por_fecha_hora).map(key => [
+                                key,
+                                data.menciones_por_fecha_hora[key].palabras_negativas,
+                                data.menciones_por_fecha_hora[key].palabras_negativas_rechazadas,
+                                data.menciones_por_fecha_hora[key].palabras_neutras,
+                                data.menciones_por_fecha_hora[key].palabras_positivas,
+                                data.menciones_por_fecha_hora[key].palabras_positivas_rechazadas,
+                            ]),
+                        ]
+                    }
+                },
+                { text: 'Total de Sentimientos', style: 'subheader' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['*', '*'],
+                        body: [
+                            ['Tipo de Sentimiento', 'Cantidad'],
+                            ['Negativas', data.total_palabras.negativas],
+                            ['Negativas Rechazadas', data.total_palabras.negativas_rechazadas],
+                            ['Neutras', data.total_palabras.neutras],
+                            ['Positivas', data.total_palabras.positivas],
+                            ['Positivas Rechazadas', data.total_palabras.positivas_rechazadas],
+                        ]
+                    }
+                }
+            ],
+            styles: {
+                header: {
+                    fontSize: 18,
+                    bold: true,
+                    alignment: 'center',
+                    margin: [0, 0, 0, 20]
+                },
+                subheader: {
+                    fontSize: 14,
+                    bold: true,
+                    margin: [0, 20, 0, 10]
+                }
+            }
+        };
+
+        pdfMake.createPdf(documentoPDF).download('reporte_sentimientos.pdf');
+}
+
+function generarPDFMenciones() {
+        const mencionesCanvas = document.getElementById('graficoMenciones');
+        const pdfMake = window.pdfMake;
+
+        const data = {{ data_menciones|safe }}; // Tus datos de menciones
+
+        const documentoPDF = {
+            content: [
+                { text: 'Reporte de Menciones', style: 'header' },
+                { text: 'Gráfico de Menciones', style: 'subheader' },
+                {
+                    image: mencionesCanvas.toDataURL(),
+                    width: 500
+                },
+                { text: 'Detalles de Menciones', style: 'subheader' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['auto', 'auto', 'auto'],
+                        body: [
+                            ['Fecha', 'Usuario', 'Menciones'],
+                            ...Object.keys(data.menciones_por_fecha).flatMap(fecha => (
+                                Object.entries(data.menciones_por_fecha[fecha]).map(([usuario, menciones]) => [fecha, usuario, menciones])
+                            ))
+                        ]
+                    }
+                },
+                { text: 'Total de Menciones por Usuario', style: 'subheader' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['auto', 'auto'],
+                        body: [
+                            ['Usuario', 'Menciones'],
+                            ...Object.entries(data.menciones_usuario_totales).map(([usuario, menciones]) => [usuario, menciones])
+                        ]
+                    }
+                }
+            ],
+            styles: {
+                header: {
+                    fontSize: 18,
+                    bold: true,
+                    alignment: 'center',
+                    margin: [0, 0, 0, 20]
+                },
+                subheader: {
+                    fontSize: 14,
+                    bold: true,
+                    margin: [0, 20, 0, 10]
+                }
+            }
+        };
+
+        pdfMake.createPdf(documentoPDF).download('reporte_menciones.pdf');
+
+}
+
+function generarPDFHashtags() {
+        const hashtagsCanvas = document.getElementById('graficoHashtags');
+        const pdfMake = window.pdfMake;
+
+        const data = {{ data_hashtags|safe }}; // Tus datos de hashtags
+
+        const documentoPDF = {
+            content: [
+                { text: 'Reporte de Hashtags', style: 'header' },
+                { text: 'Gráfico de Hashtags', style: 'subheader' },
+                {
+                    image: hashtagsCanvas.toDataURL(),
+                    width: 500
+                },
+                { text: 'Detalles de Hashtags', style: 'subheader' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['auto', 'auto', 'auto'],
+                        body: [
+                            ['Fecha', 'Hashtag', 'Menciones'],
+                            ...Object.keys(data.hashtags_por_fecha).flatMap(fecha => (
+                                Object.entries(data.hashtags_por_fecha[fecha]).map(([hashtag, menciones]) => [fecha, hashtag, menciones])
+                            ))
+                        ]
+                    }
+                },
+                { text: 'Total de Menciones por Hashtag', style: 'subheader' },
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['auto', 'auto'],
+                        body: [
+                            ['Hashtag', 'Menciones'],
+                            ...Object.entries(data.hashtags_totales).map(([hashtag, menciones]) => [hashtag, menciones])
+                        ]
+                    }
+                }
+            ],
+            styles: {
+                header: {
+                    fontSize: 18,
+                    bold: true,
+                    alignment: 'center',
+                    margin: [0, 0, 0, 20]
+                },
+                subheader: {
+                    fontSize: 14,
+                    bold: true,
+                    margin: [0, 20, 0, 10]
+                }
+            }
+        };
+
+        pdfMake.createPdf(documentoPDF).download('reporte_hashtags.pdf');
+
+}
+
+    function mostrarDetallesHashtags() {
+    const detallesHashtagsDiv = document.getElementById('detallesHashtags');
+    const data = {{ data_hashtags|safe }}; // Tus datos de hashtags
+
+    let contenido = '<h3>Detalles de Hashtags</h3>';
+    contenido += '<ul>';
+
+    for (const fecha in data.hashtags_por_fecha) {
+        contenido += `<li>Fecha: ${fecha}</li>`;
+        const hashtagsPorFecha = data.hashtags_por_fecha[fecha];
+        const hashtagsOrdenados = Object.keys(hashtagsPorFecha).sort((a, b) => hashtagsPorFecha[b] - hashtagsPorFecha[a]);
+
+        for (let i = 0; i < hashtagsOrdenados.length; i++) {
+            const hashtag = hashtagsOrdenados[i];
+            contenido += `<li style="list-style: none">${i + 1}. #${hashtag} : ${hashtagsPorFecha[hashtag]} mensajes</li>`;
+        }
+    }
+
+    contenido += '</ul>';
+
+    detallesHashtagsDiv.innerHTML = contenido;
+}
+
+    function mostrarDetallesMenciones() {
+    const detallesMencionesDiv = document.getElementById('detallesMenciones');
+    const data = {{ data_menciones|safe }}; // Tus datos de menciones
+
+    let contenido = '<h3>Detalles de Menciones</h3>';
+    contenido += '<ul>';
+
+    for (const fecha in data.menciones_por_fecha) {
+        contenido += `<li>Fecha: ${fecha}</li>`;
+        const mencionesPorFecha = data.menciones_por_fecha[fecha];
+        const mencionesOrdenadas = Object.keys(mencionesPorFecha).sort((a, b) => mencionesPorFecha[b] - mencionesPorFecha[a]);
+
+        for (let i = 0; i < mencionesOrdenadas.length; i++) {
+            const usuario = mencionesOrdenadas[i];
+            contenido += `<li style="list-style: none;">${i + 1}. @${usuario} : ${mencionesPorFecha[usuario]} mensajes</li>`;
+        }
+    }
+
+    contenido += '</ul>';
+
+    detallesMencionesDiv.innerHTML = contenido;
+}
+
+    function mostrarDetallesSentimientos() {
+    const detallesSentimientosDiv = document.getElementById('detallesSentimientos');
+    const data = {{ data_sentimientos|safe }}; // Tus datos de sentimientos
+
+    let contenido = '<h3>Detalles de Sentimientos</h3>';
+    contenido += '<ul>';
+
+    for (const fecha in data.menciones_por_fecha_hora) {
+        contenido += `<li>Fecha: ${fecha}</li>`;
+        const sentimientosPorFecha = data.menciones_por_fecha_hora[fecha];
+
+        if (sentimientosPorFecha.palabras_positivas > 0) {
+            contenido += `<li style="list-style: none">Mensajes con sentimiento positivo: ${sentimientosPorFecha.palabras_positivas} mensajes</li>`;
+        }
+        if (sentimientosPorFecha.palabras_negativas > 0) {
+            contenido += `<li style="list-style: none ">Mensajes con sentimiento negativo: ${sentimientosPorFecha.palabras_negativas} mensajes</li>`;
+        }
+        if (sentimientosPorFecha.palabras_neutras > 0) {
+            contenido += `<li style="list-style: none "> Mensajes con sentimiento neutros: ${sentimientosPorFecha.palabras_neutras} mensaje</li>`;
+        }
+    }
+
+    contenido += '</ul>';
+
+    detallesSentimientosDiv.innerHTML = contenido;
+}
+
+
+
+</script>
+</html>

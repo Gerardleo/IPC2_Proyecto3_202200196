@@ -6,6 +6,13 @@
     <palabra> cool </palabra>
     <palabra> satisfecho </palabra>
  </sentimientos_positivos>
+ <sentimientos_neutros> 
+    <palabra> regular </palabra>
+    <palabra> normal </palabra>
+    <palabra> bien </palabra>
+    <palabra> ok </palabra>
+   </sentimientos_neutros>
+
  <sentimientos_negativos> 
     <palabra> malo </palabra>
     <palabra> pésimo </palabra>
