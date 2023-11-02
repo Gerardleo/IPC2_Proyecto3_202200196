@@ -5,6 +5,7 @@ from xml.dom.minidom import Document, parseString
 from flask import Flask, request, jsonify
 from unidecode import unidecode
 from datetime import datetime
+from collections import defaultdict
 
 
 
@@ -36,7 +37,9 @@ def procesar_archivo_mensajes():
         menciones_mensaje = set()
         hashtags_mensaje = set()
 
-        texto = mensaje.find('TEXTO').text.strip().lower()
+        texto = mensaje.find('TEXTO').text.strip()
+        # Normalizar el texto para ignorar mayúsculas y minúsculas y tildes
+        texto = unidecode(texto).lower()
 
         # Dividir el texto en palabras y contar usuarios y hashtags para este mensaje
         palabras = texto.split()
@@ -124,44 +127,47 @@ def generar_archivo_salida():
     return "Archivo de salida generado con éxito"
 
 @app.route('/grabarConfiguracion', methods=['POST'])
-def leer_archivo_config():
-    global palabras_positivas, palabras_negativas, palabras_negativas_rechazadas, palabras_positivas_rechazadas
-
-    archivo = request.files.get('archivo')  # Usamos request.files.get para evitar errores si no se proporciona un archivo
-
+def contar_palabras_en_apartados():
+    archivo = request.files.get('archivo')
+    
     if archivo.filename == '':
         return jsonify({"error": "No se ha proporcionado ningún archivo"}), 400
 
-    # Parsear el archivo de configuración del diccionario de sentimientos
     tree = ET.parse(archivo)
     root = tree.getroot()
 
-    # Obtener la fecha actual
-    fecha_actual = datetime.now().strftime("%d/%m/%Y")
-    hora_actual = datetime.now().strftime("%H:%M")
+    palabras_positivas = root.find('sentimientos_positivos').findall('palabra')
+    palabras_negativas = root.find('sentimientos_negativos').findall('palabra')
+    
+    # Buscar los sentimientos neutros si existen
+    sentimientos_neutros = root.find('sentimientos_neutros')
+    if sentimientos_neutros is not None:
+        palabras_neutras = sentimientos_neutros.findall('palabra')
+    else:
+        palabras_neutras = []
 
-    # Contar palabras en la lista de sentimientos positivos y sumar al contador global
-    palabras_positivas = len(root.find('sentimientos_positivos').findall('palabra'))
+    palabras_positivas_rechazadas = root.find('sentimientos_positivos').findall('palabra_rechazada')
+    palabras_negativas_rechazadas = root.find('sentimientos_negativos').findall('palabra_rechazada')
 
-    # Contar palabras en la lista de sentimientos negativos y sumar al contador global
-    palabras_negativas = len(root.find('sentimientos_negativos').findall('palabra'))
-
-    palabras_negativas_rechazadas = len(root.find('sentimientos_negativos').findall('palabra_rechazada'))
-
-    palabras_positivas_rechazadas = len(root.find('sentimientos_positivos').findall('palabra_rechazada'))
-
-    # Guardar la configuración actual en el historial de configuraciones
-    configuracion_actual = {
-        "fecha": str(fecha_actual),
-        "hora": str(hora_actual),
-        "palabras_positivas": palabras_positivas,
-        "palabras_negativas": palabras_negativas,
-        "palabras_negativas_rechazadas": palabras_negativas_rechazadas,
-        "palabras_positivas_rechazadas": palabras_positivas_rechazadas
+    conteo_palabras = {
+        "fecha": datetime.now().strftime("%d/%m/%Y"),
+        "hora": datetime.now().strftime("%H:%M:%S"),
+        "palabras_positivas": len(palabras_positivas),
+        "palabras_negativas": len(palabras_negativas),
+        "palabras_neutras": len(palabras_neutras),  
+        "palabras_positivas_rechazadas": len(palabras_positivas_rechazadas),
+        "palabras_negativas_rechazadas": len(palabras_negativas_rechazadas)
     }
-    historial_configuraciones.append(configuracion_actual)
+    historial_configuraciones.append(conteo_palabras)
 
-    return json.dumps(configuracion_actual, indent=4)
+    return json.dumps({
+        "palabras_positivas": len(palabras_positivas),
+        "palabras_negativas": len(palabras_negativas),
+        "palabras_neutras": len(palabras_neutras),  
+        "palabras_positivas_rechazadas": len(palabras_positivas_rechazadas),
+        "palabras_negativas_rechazadas": len(palabras_negativas_rechazadas),
+    }, indent=4)
+
 
 @app.route('/obtenerHistorialConfiguraciones', methods=['GET'])
 def obtener_historial_configuraciones():
@@ -170,7 +176,7 @@ def obtener_historial_configuraciones():
 
 @app.route('/generarSalidaConfig', methods=['GET'])
 def generar_archivo_resumen_config():
-    global palabras_positivas, palabras_negativas, palabras_negativas_rechazadas, palabras_positivas_rechazadas, historial_configuraciones
+    global palabras_positivas, palabras_negativas, palabras_negativas_rechazadas, palabras_positivas_rechazadas, historial_configuraciones,palabras_neutras
 
     archivo_salida = "resumenConfig.xml"
 
@@ -210,6 +216,10 @@ def generar_archivo_resumen_config():
         palabras_negativas_rechazadas_element.appendChild(doc.createTextNode(str(configuracion['palabras_negativas_rechazadas'])))
         configuracion_element.appendChild(palabras_negativas_rechazadas_element)  # Adjuntado dentro de configuracion_element
 
+        palabras_neutras_element = doc.createElement('PALABRAS_NEUTRAS')
+        palabras_neutras_element.appendChild(doc.createTextNode(str(configuracion['palabras_neutras'])))
+        configuracion_element.appendChild(palabras_neutras_element)  # Adjuntado dentro de configuracion_element
+
         # Agregar los demás datos de configuración (palabras positivas, negativas, rechazadas, etc.)
 
     # Generar el archivo de salida en el formato deseado
@@ -220,14 +230,16 @@ def generar_archivo_resumen_config():
 
 @app.route('/limpiarDatos', methods=['POST'])
 def reiniciar_datos_globales():
-    global mensajes_recibidos, usuarios_mencionados, hashtags_incluidos, palabras_positivas, palabras_negativas, palabras_negativas_rechazadas, palabras_positivas_rechazadas
+    global mensajes_recibidos, usuarios_mencionados, hashtags_incluidos, palabras_positivas, palabras_negativas, palabras_negativas_rechazadas, palabras_positivas_rechazadas, historial_configuraciones
     mensajes_recibidos = {}
     usuarios_mencionados = set()
     hashtags_incluidos = set()
     palabras_positivas = 0
     palabras_negativas = 0
+    palabras_neutras = 0
     palabras_negativas_rechazadas = 0
     palabras_positivas_rechazadas = 0
+    historial_configuraciones = []
 
     return json.dumps({
         "mensajes_recibidos": mensajes_recibidos,
@@ -235,8 +247,10 @@ def reiniciar_datos_globales():
         "hashtags_incluidos": list(hashtags_incluidos),
         "palabras_positivas": palabras_positivas,
         "palabras_negativas": palabras_negativas,
+        "palabras_neutras": palabras_neutras,
         "palabras_negativas_rechazadas": palabras_negativas_rechazadas,
-        "palabras_positivas_rechazadas": palabras_positivas_rechazadas
+        "palabras_positivas_rechazadas": palabras_positivas_rechazadas,
+        "configuracion_por_fecha": historial_configuraciones
     }, indent=4)
 
 @app.route('/devolverHashtags', methods=['GET'])
@@ -303,7 +317,8 @@ def grabarDatos():
     return 'Datos guardados con éxito'
 
 
-@app.route('/obtenerHastagPorRango', methods=['GET'])
+
+@app.route('/obtenerHashtagsPorRango', methods=['GET'])
 def contar_hashtags_por_rango():
     codigoRespuesta = 1
     fecha_inicio = request.form.get('fecha_inicio')
@@ -312,7 +327,7 @@ def contar_hashtags_por_rango():
     if fecha_inicio is None or fecha_fin is None:
         return jsonify({"error": "Las fechas de inicio y fin son requeridas"}), 400
 
-    hashtags_contados = {}  # Diccionario para contar hashtags
+    hashtags_por_fecha = defaultdict(lambda: defaultdict(int))  # Diccionario para contar hashtags por fecha
 
     # Iterar a través de las fechas dentro del rango
     for fecha in mensajes_recibidos:
@@ -320,16 +335,26 @@ def contar_hashtags_por_rango():
             for mensaje in mensajes_recibidos[fecha]:
                 hashtags = mensaje['HASH_INCLUIDOS']
                 for hashtag in hashtags:
-                    if hashtag in hashtags_contados:
-                        hashtags_contados[hashtag] += 1
-                    else:
-                        hashtags_contados[hashtag] = 1
+                    hashtags_por_fecha[fecha][hashtag] += 1
 
-    if not hashtags_contados:
+    if not hashtags_por_fecha:
         codigoRespuesta = 0
-        return jsonify({"codigo":codigoRespuesta,"mensaje":"No se encontraron hashtags en el rango de fechas proporcionado."}), 404
+        return jsonify({"codigo": codigoRespuesta, "mensaje": "No se encontraron hashtags en el rango de fechas proporcionado."}), 404
 
-    return jsonify({"codigo":codigoRespuesta,"hashtags_contados": hashtags_contados})
+    # Organizar los hashtags por fecha
+    resultado = {
+        "codigo": codigoRespuesta,
+        "hashtags_por_fecha": dict(hashtags_por_fecha),
+        "hashtags_totales": defaultdict(int)
+    }
+
+    # Calcular el contador total
+    for fecha, hashtags in hashtags_por_fecha.items():
+        for hashtag, conteo in hashtags.items():
+            resultado["hashtags_totales"][hashtag] += conteo
+
+    return jsonify(resultado)
+
 
 @app.route('/obtenerMencionesPorRango', methods=['GET'])
 def contar_menciones_por_rango():
@@ -340,7 +365,7 @@ def contar_menciones_por_rango():
     if fecha_inicio is None or fecha_fin is None:
         return jsonify({"Las fechas de inicio y fin son requeridas"}), 400
 
-    menciones_contadas = {}  # Diccionario para contar menciones
+    menciones_por_fecha = defaultdict(lambda: defaultdict(int))  # Diccionario para contar menciones por fecha
 
     # Iterar a través de las fechas dentro del rango
     for fecha in mensajes_recibidos:
@@ -348,16 +373,25 @@ def contar_menciones_por_rango():
             for mensaje in mensajes_recibidos[fecha]:
                 menciones = mensaje['USR_MENCIONADOS']
                 for mencion in menciones:
-                    if mencion in menciones_contadas:
-                        menciones_contadas[mencion] += 1
-                    else:
-                        menciones_contadas[mencion] = 1
-    if not menciones_contadas:
+                    menciones_por_fecha[fecha][mencion] += 1
+
+    if not menciones_por_fecha:
         codigoRespuesta = 0
-        return jsonify({"codigo":codigoRespuesta,"mensaje":"No se encontraron menciones en el rango de fechas proporcionado."}), 404
+        return jsonify({"codigo": codigoRespuesta, "mensaje": "No se encontraron menciones en el rango de fechas proporcionado."}), 404
 
-    return jsonify({"codigo":codigoRespuesta,"menciones_usuario": menciones_contadas})
+    # Organizar las menciones por fecha
+    resultado = {
+        "codigo": codigoRespuesta,
+        "menciones_por_fecha": dict(menciones_por_fecha),
+        "menciones_usuario_totales": defaultdict(int)
+    }
 
+    # Calcular el contador total
+    for fecha, menciones in menciones_por_fecha.items():
+        for mencion, conteo in menciones.items():
+            resultado["menciones_usuario_totales"][mencion] += conteo
+
+    return jsonify(resultado)
 
 @app.route('/consultarSentimientos', methods=['GET'])
 def consultar_sentimientos():
@@ -370,23 +404,62 @@ def consultar_sentimientos():
         return jsonify({"Mensaje": "Los parámetros 'fecha_inicio' y 'fecha_fin' son obligatorios."}), 400
 
     # Convierte las fechas de cadena a objetos datetime
-    fecha_inicio = datetime.strptime(fecha_inicio_str, "%d/%m/%Y")
-    fecha_fin = datetime.strptime(fecha_fin_str, "%d/%m/%Y")
+    fecha_inicio = datetime.strptime(fecha_inicio_str, "%d-%m-%Y")
+    fecha_fin = datetime.strptime(fecha_fin_str, "%d-%m-%Y")
 
-    # Realiza la búsqueda de configuraciones en el rango de fechas
-    configuraciones_en_rango = []
+    # Inicializar un diccionario para almacenar las menciones de palabras por fecha y hora, incluyendo segundos
+    menciones_por_fecha_hora = defaultdict(dict)
+
+    # Calcular el total de palabras en todas las configuraciones dentro del rango de fechas
+    total_palabras_positivas = 0
+    total_palabras_negativas = 0
+    total_palabras_positivas_rechazadas = 0
+    total_palabras_negativas_rechazadas = 0
+    total_palabras_neutras = 0
+
     for configuracion in historial_configuraciones:
         fecha_configuracion = datetime.strptime(configuracion["fecha"], "%d/%m/%Y")
+        hora_configuracion = configuracion.get("hora", "")
+        
         if fecha_inicio <= fecha_configuracion <= fecha_fin:
-            configuraciones_en_rango.append(configuracion)
+            palabras_positivas = configuracion.get("palabras_positivas", 0)
+            palabras_negativas = configuracion.get("palabras_negativas", 0)
+            palabras_neutras = configuracion.get("palabras_neutras", 0)
+            palabras_positivas_rechazadas = configuracion.get("palabras_positivas_rechazadas", 0)
+            palabras_negativas_rechazadas = configuracion.get("palabras_negativas_rechazadas", 0)
 
-    if configuraciones_en_rango == []:
+            # Actualizar los totales de palabras
+            total_palabras_positivas += palabras_positivas
+            total_palabras_negativas += palabras_negativas
+            total_palabras_neutras += palabras_neutras
+            total_palabras_positivas_rechazadas += palabras_positivas_rechazadas
+            total_palabras_negativas_rechazadas += palabras_negativas_rechazadas
+
+            # Construir la clave para la fecha y hora, incluyendo segundos
+            fecha_hora_str = f"{fecha_configuracion.strftime('%d/%m/%Y')} {hora_configuracion}"
+
+            # Actualizar las menciones de palabras por fecha y hora
+            menciones_por_fecha_hora[fecha_hora_str]["palabras_positivas"] = palabras_positivas
+            menciones_por_fecha_hora[fecha_hora_str]["palabras_negativas"] = palabras_negativas
+            menciones_por_fecha_hora[fecha_hora_str]["palabras_positivas_rechazadas"] = palabras_positivas_rechazadas
+            menciones_por_fecha_hora[fecha_hora_str]["palabras_negativas_rechazadas"] = palabras_negativas_rechazadas
+            menciones_por_fecha_hora[fecha_hora_str]["palabras_neutras"] = palabras_neutras
+            
+    if not menciones_por_fecha_hora:
         codigoRespuesta = 0
-        return jsonify({"codigo":codigoRespuesta,"mensaje":"No se encontraron configuraciones en el rango de fechas proporcionado."}), 404
+        return jsonify({"codigo": codigoRespuesta, "mensaje": "No se encontraron sentimientos en el rango de fechas proporcionado."}), 404
 
-    return jsonify({"codigo":codigoRespuesta,"configuraciones_en_rango": configuraciones_en_rango})
-
-
+    return jsonify({
+        "codigo": codigoRespuesta,
+        "menciones_por_fecha_hora": menciones_por_fecha_hora,
+        "total_palabras": {
+            "positivas": total_palabras_positivas,
+            "negativas": total_palabras_negativas,
+            "neutras": total_palabras_neutras,
+            "positivas_rechazadas": total_palabras_positivas_rechazadas,
+            "negativas_rechazadas": total_palabras_negativas_rechazadas
+        }
+    })
 
 if __name__ == "__main__":
     try:
@@ -399,6 +472,7 @@ if __name__ == "__main__":
             menciones_hashtag = data.get("menciones_hashtag", {})
             palabras_positivas = data.get("palabras_positivas", 0)
             palabras_negativas = data.get("palabras_negativas", 0)
+            palabras_neutras = data.get("palabras_neutras", 0)  
             palabras_negativas_rechazadas = data.get("palabras_negativas_rechazadas", 0) 
             palabras_positivas_rechazadas = data.get("palabras_positivas_rechazadas", 0)
             historial_configuraciones = data.get("configuracion_por_fecha", [])
@@ -411,6 +485,7 @@ if __name__ == "__main__":
         menciones_hashtag = {}
         palabras_positivas = 0
         palabras_negativas = 0
+        palabras_neutras = 0
         palabras_negativas_rechazadas = 0
         palabras_positivas_rechazadas = 0
         historial_configuraciones = []
