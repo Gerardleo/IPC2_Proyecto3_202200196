@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Aplicación Django</title>
+    <title>Aplicación</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
 <style>
@@ -15,9 +15,10 @@
         text-align: center;
         margin-bottom: 50px;
     }
-    .btn{
+    .btn_opciones{
         margin-bottom: 20px;
         height: 100px;
+        color: white;
     }
     .minimalist-heading {
         font-family: 'Roboto Slab', serif;
@@ -30,38 +31,97 @@
     }
 </style>
 <body>
-    <h1 class="minimalist-heading">Título Minimalista</h1>
+     <div id="alerta" class="alert alert-info" style="display: none;">
+        Respuesta: <span id="respuesta"></span>
+     </div>
+    <h1 class="minimalist-heading">Aplicacion leer mensajes</h1>
     <div class="container h-50">
         <div class="row h-50 justify-content-center align-items-center">
             <div class="col-md-6">
-                <a href="#" class="btn btn-primary btn-lg btn-block rounded-pill text-dark d-flex justify-content-center align-items-center" data-bs-toggle="modal" data-bs-target="#cargarArchivoModal">Opción 1</a>
+                <a href="#" class="btn btn-primary btn_opciones btn-lg btn-block rounded-pill text-white d-flex justify-content-center align-items-center" data-bs-toggle="modal" data-bs-target="#cargarArchivoModal">Cargar Mensajes</a>
             </div>
             <div class="col-md-6">
-                <a href="#" class="btn btn-info btn-lg btn-block rounded-pill text-dark d-flex justify-content-center align-items-center">Opción 2</a>
+                <a href="#" class="btn btn_opciones btn-info btn-lg btn-block rounded-pill text-white d-flex justify-content-center align-items-center" data-bs-toggle="modal" data-bs-target="#cargarArchivoConfigModal">Cargar Sentimientos</a>
             </div>
         </div>
         <div class="row h-50 justify-content-center align-items-center">
             <div class="col-md-6">
-                <a href="#" class="btn btn-success btn-lg btn-block rounded-pill text-dark d-flex justify-content-center align-items-center">Opción 3</a>
+                <a href="{% url 'limpiarDatos' %}" class="btn  btn_opciones btn-success btn-lg btn-block rounded-pill text-white d-flex justify-content-center align-items-center">Limpiar Datos</a>
             </div>
             <div class="col-md-6">
-                <a href="#" class="btn btn-warning btn-lg btn-block rounded-pill text-dark d-flex justify-content-center align-items-center">Opción 4</a>
+                <a href="{% url 'peticiones' %}" class="btn btn_opciones btn-warning btn-lg btn-block rounded-pill text-white d-flex justify-content-center align-items-center">Peticiones</a>
+            </div>
+        </div>
+        <div class="row h-50 justify-content-center align-items-center">
+            <div class="col-md-6">
+                <a href="{% url 'guardarDatos' %}" class="btn  btn_opciones btn-secondary btn-lg btn-block rounded-pill text-white d-flex justify-content-center align-items-center">Guardar Datos</a>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Cargar Archivo -->
+   <!-- Modal de Cargar Archivo de mensajes -->
     <div class="modal fade" id="cargarArchivoModal" tabindex="-1" role="dialog" aria-labelledby="cargarArchivoModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
-               <form method="post" action="{% url 'cargar_archivo_django' %}" enctype="multipart/form-data">
+                <form action="{% url 'cargar_archivo_mensajes' %}" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <input type="file" name="archivo">
-                    <button type="submit">Cargar</button>
-                </form>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cargarArchivoModalLabel">Cargar Archivo Mensajes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                      <input type="file"  id="archivo_mensajes" name="archivo_mensajes" accept=".xml">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="cargarBoton">Cargar</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+
+     <!-- Modal de Cargar Archivo de Config -->
+    <div class="modal fade" id="cargarArchivoConfigModal" tabindex="-1" role="dialog" aria-labelledby="cargarArchivoConfigModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{% url 'cargar_archivo_config' %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cargarArchivoConfigModalLabel">Cargar Archivo Sentimientos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                      <input type="file" id="archivo_config" name="archivo_config" accept=".xml">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="cargarBoton">Cargar</button>
+                </div>
+            </form>
             </div>
         </div>
     </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+<script>
+    // Función para mostrar la alerta con un mensaje y luego ocultarla después de cierto tiempo
+    function mostrarAlerta(mensaje, tiempo) {
+        var alerta = document.getElementById('alerta');
+        var respuesta = document.getElementById('respuesta');
+        respuesta.innerHTML = mensaje;
+        alerta.style.display = 'block';
+        setTimeout(function() {
+            alerta.style.display = 'none';
+        }, tiempo);
+    }
+
+    // Obtiene la respuesta del servidor y muestra la alerta
+    var respuesta = "{{ respuesta|default:'' }}"; // Obtiene la respuesta de Django
+    if (respuesta) {
+        mostrarAlerta(respuesta, 5000); // Muestra la alerta durante 5 segundos (5000 ms)
+    }
+</script>
 </body>
 </html>
