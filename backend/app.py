@@ -6,6 +6,8 @@ from flask import Flask, request, jsonify
 from unidecode import unidecode
 from datetime import datetime
 from collections import defaultdict
+from flask import send_file
+import re
 
 
 
@@ -23,15 +25,41 @@ def procesar_archivo_mensajes():
     tree = ET.parse(archivo)
     root = tree.getroot()
 
+    fecha_hora_regex = r'(\d{2}/\d{2}/\d{4})'  # Patrón de fecha
+    lugar_regex = r'[^,\d\n]*(?=(?:, \d{2}/\d{2}/\d{4} \d{1,2}:\d{2} hrs\.|$))'  # Patrón de lugar
+    hora_regex = r'(\d{1,2}:\d{2} hrs\.)' # Patrón de hora
+
     for mensaje in root.findall('MENSAJE'):
         fecha_hora = mensaje.find('FECHA').text.strip()
-        lugar, fecha_hora = fecha_hora.split(', ')
-        fecha_hora = fecha_hora.strip().split(' ')
-        fecha = fecha_hora[0]
-        hora = fecha_hora[1]
 
-        # Parsear la fecha a un objeto datetime
-        fecha_obj = datetime.strptime(fecha, '%d/%m/%Y')
+        fecha_match = re.search(fecha_hora_regex, fecha_hora)
+        lugar_match = re.search(lugar_regex, fecha_hora)
+        hora_match = re.search(hora_regex, fecha_hora)
+
+        if fecha_match:
+            fecha_str = fecha_match.group(0)
+            fecha_obj = datetime.strptime(fecha_str, '%d/%m/%Y')
+        else:
+            # Manejar el caso en el que la fecha no se encuentre
+            fecha_obj = None
+
+        if lugar_match:
+            lugar = lugar_match.group(0).strip()
+        else:
+            lugar = None
+
+        if hora_match:
+            hora_str = hora_match.group(0)
+            hora = datetime.strptime(hora_str, '%H:%M hrs.').time()
+        else:
+            hora = None
+
+        if fecha_obj:
+            fecha = fecha_obj.strftime('%d/%m/%Y')  # Convertir la fecha a una cadena en el formato deseado
+        else:
+            fecha = None
+
+            # Parsear la fecha a un objeto datetime
         
         # Inicializar las menciones y hashtags para este mensaje
         menciones_mensaje = set()
@@ -57,23 +85,24 @@ def procesar_archivo_mensajes():
                 menciones_hashtag[hashtag_sin_tildes] = menciones_hashtag.get(hashtag_sin_tildes, 0) + 1
 
         # Actualizar la información por fecha
-        if fecha in mensajes_recibidos:
-            mensajes_recibidos[fecha].append({
-                'LUGAR': lugar,
-                'HORA': hora,
-                'MENSAJE': mensaje.find('TEXTO').text.strip(),
-                'USR_MENCIONADOS': list(menciones_mensaje),
-                'HASH_INCLUIDOS': list(hashtags_mensaje)
-            })
-        else:
-            mensajes_recibidos[fecha] = [{
-                'LUGAR': lugar,
-                'HORA': hora,
-                'MENSAJE': mensaje.find('TEXTO').text.strip(),
-                'USR_MENCIONADOS': list(menciones_mensaje),
-                'HASH_INCLUIDOS': list(hashtags_mensaje)
-            }]
-
+        if fecha:
+            if fecha in mensajes_recibidos:
+                mensajes_recibidos[fecha].append({
+                    'LUGAR': lugar,
+                    'HORA': hora.strftime('%H:%M:%S') if hora else None,  # Convertir la hora a una cadena en formato 'HH:MM:SS'
+                    'MENSAJE': mensaje.find('TEXTO').text.strip(),
+                    'USR_MENCIONADOS': list(menciones_mensaje),
+                    'HASH_INCLUIDOS': list(hashtags_mensaje)
+                })
+            else:
+                mensajes_recibidos[fecha] = [{
+                    'LUGAR': lugar,
+                    'HORA': hora.strftime('%H:%M:%S') if hora else None,  # Convertir la hora a una cadena en formato 'HH:MM:SS'
+                    'MENSAJE': mensaje.find('TEXTO').text.strip(),
+                    'USR_MENCIONADOS': list(menciones_mensaje),
+                    'HASH_INCLUIDOS': list(hashtags_mensaje)
+                }]
+    generar_archivo_salida()
     return json.dumps({
         "mensajes_recibidos": mensajes_recibidos,
         "usuarios_mencionados": list(usuarios_mencionados),
@@ -104,8 +133,13 @@ def generar_archivo_salida():
                 tiempo = ET.SubElement(resumen_mensajes, 'TIEMPO')
                 ET.SubElement(tiempo, 'FECHA').text = fecha
 
-                # Manejar la hora, asegurándose de que esté en el formato "hh:mm"
-                hora = mensaje['HORA'].split(' ')[0]
+                if mensaje['HORA'] is not None:
+                    # Manejar la hora, asegurándose de que esté en el formato "hh:mm"
+                    hora = mensaje['HORA'].split(' ')[0]
+                else:
+                    # Si la hora es None, asignar un valor predeterminado o manejarlo como desees
+                    hora = "00:00"
+
                 ET.SubElement(tiempo, 'HORA').text = hora
 
                 # Contar usuarios mencionados y hashtags incluidos
@@ -159,7 +193,7 @@ def contar_palabras_en_apartados():
         "palabras_negativas_rechazadas": len(palabras_negativas_rechazadas)
     }
     historial_configuraciones.append(conteo_palabras)
-
+    generar_archivo_resumen_config()
     return json.dumps({
         "palabras_positivas": len(palabras_positivas),
         "palabras_negativas": len(palabras_negativas),

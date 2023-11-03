@@ -45,16 +45,16 @@
         Respuesta: <span id="respuesta"></span>
 </div>
 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-  <a href="" class="btn btn-primary me-md-2"  style="margin-top: 5px" >Ayuda</a>
+<a href="#" class="btn btn-primary me-md-2" style="margin-top: 5px" data-bs-toggle="modal" data-bs-target="#ayudaModal">Ayuda</a>
   <a href="{% url 'index' %}" class="btn btn-primary" style="margin-top: 5px"  >Inicio</a>
 </div>
 
     <h1 class="minimalist-heading" style="margin-left: 5px; margin-right: 5px" >Peticiones</h1>
 
 <div class="row" style="margin-left: 5px; margin-right: 5px">
-  <div class="col-sm-4">
+  <div class="col-sm-4" id="card_menciones">
     <div class="card">
-      <div class="card-body">
+      <div class="card-body" >
         <h5 class="card-title">Consultar Menciones</h5>
         <p class="card-text">En este apartado puede buscar las menciones mediante fechas</p>
           <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#busquedaMencionesModal">Buscar</a>
@@ -70,7 +70,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-4">
+  <div class="col-sm-4" id="card_hastghs">
     <div class="card">
       <div class="card-body">
         <h5 class="card-title">Consultar Hashtags</h5>
@@ -91,7 +91,7 @@
       </div>
     </div>
   </div>
-    <div class="col-sm-4">
+    <div class="col-sm-4" id="card_sentimientos">
     <div class="card">
       <div class="card-body">
         <h5 class="card-title">Consultar Sentimientos</h5>
@@ -212,6 +212,30 @@
     </div>
 
 
+<div class="modal fade" id="ayudaModal" tabindex="-1" role="dialog" aria-labelledby="ayudaModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ayudaModalLabel">Ayuda</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                     <div class="form-group">
+                        <a onclick="mostrarInformacion()" class="btn btn-primary me-md-2" style="margin-top: 5px" id="info">Informacion sobre mi </a>
+                          <a href="https://github.com/Gerardleo/IPC2_Proyecto3_202200196" class="btn btn-primary" style="margin-top: 5px"  >Repositorio</a>
+                    </div>
+                      <div id="datos"></div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+
+            </div>
+        </div>
+    </div>
+
 
 
 
@@ -223,9 +247,10 @@
 
 <script>
 
-   var clickDetalleSentimientos = false
-   var clickDetalleHastags= false
-   var clickDetalleMenciones = false
+   var clickDetalleSentimientos = false;
+   var clickDetalleHastags= false;
+   var clickDetalleMenciones = false;
+   var clickInfo=false;
 
    $("#detalles_sentimientos").click(function(){
         if(clickDetalleSentimientos == false){
@@ -234,6 +259,16 @@
         }else{
             $("#detallesSentimientos").hide();
             clickDetalleSentimientos = false;
+        }
+   })
+
+    $("#info").click(function(){
+        if(clickInfo == false){
+            $("#datos").show();
+            clickInfo = true;
+        }else{
+            $("#datos").hide();
+            clickInfo = false;
         }
    })
 
@@ -265,51 +300,105 @@
   });
 
 
-    var mencionesCanvas = document.getElementById('graficoMenciones').getContext('2d');
-    var data_menciones = {{ data_menciones|safe }};
+  var mencionesCanvas = document.getElementById('graficoMenciones').getContext('2d');
+var data_menciones = {{ data_menciones|safe }};
 
-    if (data_menciones.codigo == 1) {
-        $("#detalles_menciones").show();
-        $("#generarPDFMenciones").show();
-        $("#graficoMenciones").show();
-        var labels = Object.keys(data_menciones.menciones_usuario_totales); // Obtener los nombres de usuario
-        var valores = Object.values(data_menciones.menciones_usuario_totales); // Obtener los valores
+if (data_menciones.codigo == 1) {
+    // Obtén el número de menciones totales
+    var mencionesUsuarioTotales = data_menciones.menciones_usuario_totales;
+    var numeroMenciones = 0;
 
-        var mencionesChart = new Chart(mencionesCanvas, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Número de menciones',
-                    data: valores,
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+    for (var usuario in mencionesUsuarioTotales) {
+        numeroMenciones += 1;
+    }
+
+    // Obtén el elemento card-body
+    var cardBody = document.getElementById('card_menciones');
+
+    // Define una clase de CSS alternativa
+    var nuevaClase = "col-sm-12";
+
+// Verifica si el número de menciones es mayor que 10 y, si es así, cambia la clase
+if (numeroMenciones > 10) {
+    cardBody.classList.remove("col-sm-4");
+    cardBody.classList.add(nuevaClase);
+}
+
+
+
+
+    $("#detalles_menciones").show();
+    $("#generarPDFMenciones").show();
+    $("#graficoMenciones").show();
+    var labels = Object.keys(data_menciones.menciones_usuario_totales); // Obtener los nombres de usuario
+    var valores = Object.values(data_menciones.menciones_usuario_totales); // Obtener los valores
+
+    // Generar colores RGBA aleatorios para cada barra
+    var backgroundColorMenciones = [];
+    for (var i = 0; i < labels.length; i++) {
+        backgroundColorMenciones.push(getRandomRGBA(0.2)); // Ajusta el valor de opacidad según tu preferencia
+    }
+
+    var mencionesChart = new Chart(mencionesCanvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Número de menciones',
+                data: valores,
+                backgroundColor: backgroundColorMenciones,
+                borderColor: 'rgba(0, 0, 0, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
-        });
-    } else {
-        if (data_menciones.codigo == 0) {
-            $("#alerta").show();
-            $("#respuesta").text(data_menciones.mensaje);
         }
+    });
+} else {
+    if (data_menciones.codigo == 0) {
+        $("#alerta").show();
+        $("#respuesta").text(data_menciones.mensaje);
     }
+}
+
     var hashtagsCanvas = document.getElementById('graficoHashtags').getContext('2d');
     var data_hashtgs = {{ data_hashtags|safe }};
 
     if (data_hashtgs.codigo == 1) {
+
+          var HastghasTotales = data_hashtgs.hashtags_totales;
+            var numeroHastghs = 0;
+
+            for (var hash in HastghasTotales) {
+                numeroHastghs += 1;
+            }
+
+            // Obtén el elemento card-body
+            var cardBody = document.getElementById('card_hastghs');
+
+            // Define una clase de CSS alternativa
+            var nuevaClase = "col-sm-12";
+
+        // Verifica si el número de menciones es mayor que 10 y, si es así, cambia la clase
+        if (numeroHastghs > 10) {
+            cardBody.classList.remove("col-sm-4");
+            cardBody.classList.add(nuevaClase);
+        }
         $("#detalles_hastaghs").show();
         $("#generarHastagh").show();
         $("#graficoHashtags").show();
         var labels = Object.keys(data_hashtgs.hashtags_totales); // Obtener los nombres de usuario
         var valores = Object.values(data_hashtgs.hashtags_totales); // Obtener los valores
+
+        var backgroundColorSentimientos = [];
+    for (var i = 0; i < labels.length; i++) {
+        backgroundColorSentimientos.push(getRandomRGBA(0.2)); // Ajusta el valor de opacidad según tu preferencia
+    }
 
         var hashtagsChart = new Chart(hashtagsCanvas, {
             type: 'bar',
@@ -318,8 +407,8 @@
                 datasets: [{
                     label: 'Número de Hashtags',
                     data: valores,
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: backgroundColorSentimientos,
+                    borderColor: 'rgba(0, 0, 0, 1)',
                     borderWidth: 1
                 }]
             },
@@ -346,18 +435,41 @@
         $("#detalles_sentimientos").show();
         $("#generarSentimientos").show();
 
+        var SentimientosTotales = data_sentimientos.total_palabras;
+            var numeroSentimientos = 0;
+
+            for (var sentimientos in SentimientosTotales) {
+                numeroSentimientos += 1;
+            }
+
+            // Obtén el elemento card-body
+            var cardBody = document.getElementById('card_sentimientos');
+
+            // Define una clase de CSS alternativa
+            var nuevaClase = "col-sm-12";
+
+        // Verifica si el número de menciones es mayor que 10 y, si es así, cambia la clase
+        if (numeroSentimientos > 10) {
+            cardBody.classList.remove("col-sm-4");
+            cardBody.classList.add(nuevaClase);
+        }
+
         var labels = Object.keys(data_sentimientos.total_palabras); // Obtener los nombres de usuario
         var valores = Object.values(data_sentimientos.total_palabras); // Obtener los valores
+        var backgroundColorSentimientos = [];
+        for (var i = 0; i < labels.length; i++) {
+            backgroundColorSentimientos.push(getRandomRGBA(0.2)); // Ajusta el valor de opacidad según tu preferencia
+        }
 
-        var hashtagsChart = new Chart(sentimientosCanvas, {
+        var SentimientoesChart = new Chart(sentimientosCanvas, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
                     label: 'Número de Hashtags',
                     data: valores,
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: backgroundColorSentimientos,
+                    borderColor: 'rgba(0, 0, 0, 1)',
                     borderWidth: 1
                 }]
             },
@@ -636,6 +748,43 @@ function generarPDFHashtags() {
     detallesSentimientosDiv.innerHTML = contenido;
 }
 
+function getRandomRGBA(alpha) {
+  const r = Math.floor(Math.random() * 256);
+  const g = Math.floor(Math.random() * 256);
+  const b = Math.floor(Math.random() * 256);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+ function mostrarInformacion() {
+  // Obtén una referencia al div "datos"
+  var datosDiv = document.getElementById("datos");
+
+  // Crea un elemento de párrafo para cada dato y asigna el contenido
+  var nombreP = document.createElement("p");
+  nombreP.textContent = "Nombre: Gerardo Ortiz";
+
+  var carnetP = document.createElement("p");
+  carnetP.textContent = "Carnet: 2022000196";
+
+  var uniP = document.createElement("p");
+  uniP.textContent = "Universidad: San Carlos de Guatemala";
+
+  var proyP = document.createElement("p");
+  proyP.textContent = "Proyecto: Proyecto 3 de IPC2";
+
+  var correoP = document.createElement("p");
+  correoP.textContent = "Correo: 3021290650101@ingenieria.usac.edu.gt"
+
+  // Limpia el contenido anterior del div "datos"
+  datosDiv.innerHTML = "";
+
+  // Agrega los elementos de párrafo al div "datos"
+  datosDiv.appendChild(nombreP);
+  datosDiv.appendChild(carnetP)
+  datosDiv.appendChild(uniP);
+  datosDiv.appendChild(proyP);
+  datosDiv.appendChild(correoP);
+}
 
 
 </script>
