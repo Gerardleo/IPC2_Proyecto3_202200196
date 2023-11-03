@@ -2,16 +2,11 @@ import requests
 from django.http import HttpResponse
 from django.template import loader
 from requests import post,get
-from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
 
 
-
-
 ruta = "http://127.0.0.1:5000"
-def getInfo(request):
-    return HttpResponse("Frontend: Estudiante de ipc3")
 
 def index(request):
     template = loader.get_template('Index.html')
@@ -64,7 +59,10 @@ def cargar_archivo_config(request):
             # Crear una solicitud POST al backend de Flask
             url_flask = ruta + '/grabarConfiguracion'
             files = {'archivo': archivo}
+            url_archivo = ruta + '/generarSalida'
             response = post(url_flask, files=files)
+            response2 = get(url_archivo)
+            print(response2)
             print(response)
             template = loader.get_template('Index.html')
 
@@ -97,7 +95,7 @@ def limpiar_datos(request):
 
 def peticiones(request):
     template = loader.get_template('peticiones.html')
-    return HttpResponse(template.render({'data_menciones': "1", 'respuesta': '', 'data_hashtags': "1"}, request))
+    return HttpResponse(template.render({'data_menciones': "1", 'respuesta': '', 'data_hashtags': "1", 'data_sentimientos': "1"}, request))
 
 @csrf_exempt
 def buscarMenciones(request):
